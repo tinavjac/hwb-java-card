@@ -41,6 +41,24 @@ def test_applet():
         name, sw1, sw2 = send_apdu(card, [0x80, 0x00, 0x00, 0x00, 0x05])
         print(f"{bytes(name) = }")
 
+        print("# Store data before PIN verification")
+        _, sw1, sw2 = send_apdu(card, [
+            0x80, 0x02, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04
+        ])
+        assert (sw1, sw2) == (0x63, 0x01), "Store should require PIN verification"
+
+        print("# Verify installation PIN (01 02 03 04)")
+        _, sw1, sw2 = send_apdu(card, [0x80, 0x20, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04])
+        assert (sw1, sw2) == (0x90, 0x00), "PIN verification failed"
+
+        data = list(range(1, 21))
+        print("# Store data")
+        _, sw1, sw2 = send_apdu(card, [0x80, 0x02, 0x00, 0x00, len(data)] + data)
+        assert (sw1, sw2) == (0x90, 0x00), "Store data failed"
+
+        print("# Read stored data")
+        stored, sw1, sw2 = send_apdu(card, [0x80, 0x04, 0x00, 0x00, len(data)])
+        assert (sw1, sw2) == (0x90, 0x00) and stored == data, "Stored data mismatch"
 
     except Exception as e:
         print(f"An error occurred: {e}")

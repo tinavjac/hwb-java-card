@@ -5,9 +5,15 @@ enable_timer
 card_connect
 // select
 send_apdu -sc 0 -APDU 00A404000711223344550001
-send_apdu -sc 0 -APDU 8000000003
-//...
+// Get name (does not require PIN)
+send_apdu -sc 0 -APDU 8000000006
+// Store data before VERIFY should return 6301 (PIN verification required)
+send_apdu -sc 0 -APDU 80020000140102030405060708090A0B0C0D0E0F1011121314
+// Verify the installation PIN configured with -p 01020304
+send_apdu -sc 0 -APDU 802000000401020304
+// Store and read data after successful VERIFY
+send_apdu -sc 0 -APDU 80020000140102030405060708090A0B0C0D0E0F1011121314
+send_apdu -sc 0 -APDU 8004000014
 
 card_disconnect
 release_context
-

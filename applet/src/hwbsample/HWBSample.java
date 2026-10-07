@@ -10,6 +10,7 @@ import javacard.framework.APDU;
 import javacard.framework.Applet;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
+import javacard.framework.OwnerPIN;
 import javacard.framework.Util;
 
 /**
@@ -21,9 +22,15 @@ import javacard.framework.Util;
 public class HWBSample extends Applet {
 
     private static final short MAX_DATA_LENGTH = 20;
+    private static final byte PIN_TRY_LIMIT = 3;
+    private static final byte MAX_PIN_LENGTH = 8;
+    
+    private static final short SW_PIN_VERIFICATION_REQUIRED = (short) 0x6301;
+    private static final short SW_VERIFICATION_FAILED = (short) 0x6300;
 
     private final byte[] storedData = new byte[MAX_DATA_LENGTH];
     private final byte[] name = { 'J', 'A', 'C', 'H', 'Y', 'M' };
+    private final OwnerPIN pin = new OwnerPIN(PIN_TRY_LIMIT, MAX_PIN_LENGTH);
     private short storedLength;
 
     /**
@@ -44,7 +51,30 @@ public class HWBSample extends Applet {
      * Only this class's install method should create the applet object.
      */
     protected HWBSample(byte[] bArray, short bOffset, byte bLength) {
-        register(bArray,((short)(bOffset + 1)), bArray[bOffset]);
+        short installEnd = (short) (bOffset + (bLength & 0xFF));
+        if (bOffset >= installEnd) {
+            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+
+        short aidLength = (short) (bArray[bOffset] & 0xFF);
+        short privilegesOffset = (short) (bOffset + 1 + aidLength);
+        if (privilegesOffset >= installEnd) {
+            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+        short privilegesLength = (short) (bArray[privilegesOffset] & 0xFF);
+        short pinLengthOffset = (short) (privilegesOffset + 1 + privilegesLength);
+        if (pinLengthOffset >= installEnd) {
+            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+        short pinOffset = (short) (pinLengthOffset + 1);
+        short pinLength = (short) (bArray[pinLengthOffset] & 0xFF);
+
+        if (pinLength == 0 || pinLength > MAX_PIN_LENGTH || pinOffset + pinLength > installEnd) {
+            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+
+        pin.update(bArray, pinOffset, (byte) pinLength);
+        register(bArray, (short) (bOffset + 1), (byte) aidLength);
     }
 
     /**
@@ -71,14 +101,58 @@ public class HWBSample extends Applet {
             case 0x00:
                 sendName(apdu, name, (short) name.length);
                 return;
+            case 0x20:
+                verifyPin(apdu);
+                return;
             case 0x02:
+                requireVerifiedPin();
                 receiveData(apdu);
                 return;
             case 0x04:
+                requireVerifiedPin();
                 sendStoredData(apdu);
                 return;
             default:
                 ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+        }
+    }
+
+    public boolean select() {
+        return pin.getTriesRemaining() > 0;
+    }
+
+    public void deselect() {
+        pin.reset();
+    }
+
+    private void requireVerifiedPin() {
+        if (!pin.isValidated()) {
+            ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+        }
+    }
+
+    private void verifyPin(APDU apdu) {
+        short receivedLength = apdu.setIncomingAndReceive();
+        short incomingLength = apdu.getIncomingLength();
+        if (incomingLength == 0 || incomingLength > MAX_PIN_LENGTH) {
+            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+
+        byte[] apduBuffer = apdu.getBuffer();
+        short dataOffset = apdu.getOffsetCdata();
+        while (receivedLength < incomingLength) {
+            short bytesRead = apdu.receiveBytes((short) (dataOffset + receivedLength));
+            if (bytesRead <= 0) {
+                ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+            }
+            receivedLength += bytesRead;
+        }
+        if (receivedLength != incomingLength) {
+            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        }
+
+        if (!pin.check(apduBuffer, dataOffset, (byte) incomingLength)) {
+            ISOException.throwIt(SW_VERIFICATION_FAILED);
         }
     }
 

@@ -33,9 +33,19 @@ public class HWBClientAPDUs extends HWBSampleClient {
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
             0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14
         };
+        byte[] wrongPin = { 0x00, 0x00, 0x00, 0x00 };
+        byte[] pin = { 0x01, 0x02, 0x03, 0x04 };
 
         sendAndCheck(channel, new CommandAPDU(0x80, 0x00, 0x00, 0x00, expectedName.length),
                 0x9000, expectedName, "Read name");
+        sendAndCheck(channel, new CommandAPDU(0x80, 0x02, 0x00, 0x00, data),
+                0x6301, null, "Require PIN before storing data");
+        sendAndCheck(channel, new CommandAPDU(0x80, 0x04, 0x00, 0x00, data.length),
+                0x6301, null, "Require PIN before reading data");
+        sendAndCheck(channel, new CommandAPDU(0x80, 0x20, 0x00, 0x00, wrongPin),
+                0x6300, null, "Reject incorrect PIN");
+        sendAndCheck(channel, new CommandAPDU(0x80, 0x20, 0x00, 0x00, pin),
+                0x9000, null, "Verify PIN");
         sendAndCheck(channel, new CommandAPDU(0x80, 0x02, 0x00, 0x00, data),
                 0x9000, new byte[0], "Store data");
         sendAndCheck(channel, new CommandAPDU(0x80, 0x04, 0x00, 0x00, data.length),
@@ -53,6 +63,12 @@ public class HWBClientAPDUs extends HWBSampleClient {
         //   
         // sendAndCheck(channel, new CommandAPDU(0x80, 0x04, 0x00, 0x00, data.length - 1),
         //         0x6C00 | data.length, null, "Report correct Le");
+
+        for (short attempt = 0; attempt < 3; attempt++) {
+            sendAndCheck(channel, new CommandAPDU(0x80, 0x20, 0x00, 0x00, wrongPin),
+                    0x6300, null, "Reject incorrect PIN attempt " + (attempt + 1));
+        }
+        sendAndCheck(channel, selectAppletAPDU, 0x6999, null, "Refuse selection after PIN is blocked");
     }
 
     private void sendAndCheck(CardChannel channel, CommandAPDU command, int expectedStatus,
@@ -74,8 +90,8 @@ public class HWBClientAPDUs extends HWBSampleClient {
     }
 
     public static void main(String[] args) {
-        // give installation parameters to the simulator (physical card needs to get them separately)
-        // byte[] installParams = { /**0x01, 0x02, 0x03, 0x04...**/ };
+        // The installation parameters initialize the applet PIN (01 02 03 04).
+        // A physical card must be installed with the same parameters separately.
         byte[] installParams = {0x01, 0x02, 0x03, 0x04};
         new HWBClientAPDUs().setupApplet(args, installParams);
     }
