@@ -82,6 +82,12 @@ public class HWBSample extends Applet {
         }
     }
 
+    private void sendName(APDU apdu, byte[] data, short length) {
+        apdu.setOutgoing();
+        apdu.setOutgoingLength(length);
+        apdu.sendBytesLong(data, (short) 0, length);
+    }
+
     private void receiveData(APDU apdu) {
         short receivedLength = apdu.setIncomingAndReceive();
         short incomingLength = apdu.getIncomingLength();
@@ -114,11 +120,4 @@ public class HWBSample extends Applet {
         apdu.setOutgoingLength(storedLength);
         apdu.sendBytesLong(storedData, (short) 0, storedLength);
     }
-
-    private void sendName(APDU apdu, byte[] data, short length) {
-        apdu.setOutgoing();
-        apdu.setOutgoingLength(length);
-        apdu.sendBytesLong(data, (short) 0, length);
-    }
-
 }
