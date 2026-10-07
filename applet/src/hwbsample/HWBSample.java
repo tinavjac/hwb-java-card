@@ -69,7 +69,7 @@ public class HWBSample extends Applet {
 
         switch (apduBuffer[ISO7816.OFFSET_INS]) {
             case 0x00:
-                sendData(apdu, name, (short) name.length);
+                sendName(apdu, name, (short) name.length);
                 return;
             case 0x02:
                 receiveData(apdu);
@@ -115,7 +115,7 @@ public class HWBSample extends Applet {
         apdu.sendBytesLong(storedData, (short) 0, storedLength);
     }
 
-    private void sendData(APDU apdu, byte[] data, short length) {
+    private void sendName(APDU apdu, byte[] data, short length) {
         apdu.setOutgoing();
         apdu.setOutgoingLength(length);
         apdu.sendBytesLong(data, (short) 0, length);

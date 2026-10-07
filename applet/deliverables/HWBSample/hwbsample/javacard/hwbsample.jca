@@ -1,5 +1,5 @@
 // converted by version  [v25.0]
-// on Wed Oct 07 18:54:18 CEST 2026
+// on Wed Oct 07 19:35:50 CEST 2026
 
 .package hwbsample {
 	.aid 0x11:0x22:0x33:0x44:0x55:0x0;
@@ -34,7 +34,7 @@
 		// 8
 		staticMethodRef 0.7.1(S)V;		// javacard/framework/ISOException.throwIt(S)V
 		// 9
-		staticMethodRef HWBSample/sendData(Ljavacard/framework/APDU;[BS)V;
+		staticMethodRef HWBSample/sendName(Ljavacard/framework/APDU;[BS)V;
 			.descriptor	Ljavacard/framework/APDU;	0.10;
 
 		// 10
@@ -181,7 +181,7 @@
 					getfield_a_this 1;		// reference hwbsample/HWBSample.name
 					getfield_a_this 1;		// reference hwbsample/HWBSample.name
 					arraylength;
-					invokespecial 9;		// hwbsample/HWBSample.sendData(Ljavacard/framework/APDU;[BS)V
+					invokespecial 9;		// hwbsample/HWBSample.sendName(Ljavacard/framework/APDU;[BS)V
 					return;
 				L7:	aload_0;
 					aload_1;
@@ -281,7 +281,7 @@
 					return;
 		}
 
-		.method private sendData(Ljavacard/framework/APDU;[BS)V {
+		.method private sendName(Ljavacard/framework/APDU;[BS)V {
 			.stack 4;
 			.locals 0;
 
